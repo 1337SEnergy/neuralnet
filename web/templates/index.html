@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<div class="row">
+	<div class="col-md-4">
+		<h1>Neural Network Representation</h1>
+		<textarea name="neuralnet-repre" id="neuralnet-repre" cols="90" rows="15">{{ network }}</textarea>
+	</div>
+	<div class="col-md-4" id="plot" style="position:relative; left: 265px;"></div>
+		<script>
+			var layout = {
+				autosize: false,
+				width: 650,
+				height: 480
+			};
+			Plotly.newPlot('plot', data=[], layout);</script>
+</div>
+
+<div class="row">
+	<div class="col-md-3">
+		<h3>Learning</h3>
+		<p>
+			<select id="trainingSet" style="height: 25px; width: 100px">
+				{% for file in files %}
+				<option value="{{ file }}">{{ file }}</option>
+				{% endfor %}
+			</select>
+		</p>
+		<p><input id="epochs" type="number" min="1" max="50" value="5" style="height: 25px; width:100px"/> # of Epochs per call<b>*</b></p>
+		<a class="btn btn-default" id="train">Start</a>
+		<p id="output"></p>
+	</div>
+	<div class="col-md-3">
+		<h3>Upload Custom Dataset</h3>
+		<form action="/upload" method="post" enctype="multipart/form-data">
+			Select a file: <input type="file" name="file"><br />
+			<input class="btn btn-default" type="submit">
+		</form>
+	</div>
+	<div class="col-md-3">
+		<h3>Evaluate Network</h3>
+		<p><input id="inputs" style="height: 25px; width:100px" value="[1, 1]"/> inputs to Neural Network</p>
+		<a class="btn btn-default" id="run">Run</a>
+	</div>
+</div>
+
+<div class="row">
+	<h2>Neural Network Representation Explained</h2>
+	<p>The NN Representation is in a JSON format.</p>
+	<h3>Settings</h3>
+	<p>Settings require 2 parameters: learnparam and function information.</p>
+	<p>Learning parameter is used by Neural Network when adjusting the weights.</p>
+	<h4>Function</h4>
+	<p>Settings should also contain dictionary under the key "function". This dictionary should contain the name of the function and it's parameters.</p>
+	<p>Currently supported functions are <i>tanh</i> (with no parameters) and <i>sigmoid</i> function (parameter 'alpha').</p>
+	<p>If no function is specified or the name is incorrect, sigmoid function with alpha = 1.0 will be used as default.</p>
+	<h3>Layers</h3>
+	<p>Every NN has to have at least 2 layers - input & output layer and any amount of hidden layers (layers between I/O layers).</p>
+	<p>Every layer is represented as a list of dictionaries, where every dictionary is a neuron with specific attributes.</p>
+	<h4>Input Layer</h4>
+	<p>The JSON representation of the input neurons is the simples one: input neurons have only 2 possible attributes: <i>name</i> and <i>input</i>.</p>
+	<p>None of these attributes are really neccessary, but it is recommended to at least set the input attribute to null.</p>
+	<h5><b>Name Attribute</b></h5>
+	<p>This attribute represents the name of a neuron, however the name is not used in any way during learning nor execution of NN, so it's value doesn't really matter.</p>
+	<h5><b>Input Attribute</b></h5>
+	<p>There are 2 types of input neurons depending on how you specify the input:</p>
+	<p>If the input is <i>null</i>, then the neuron will be used as a variable and will be assigned a specific input during the learning and execution.</p>
+	<p>If the input is a <i>number</i>, then the neuron will behave as a constant during both, learning and execution.</p>
+	<h4>Hidden Layer</h4>
+	<p>Hidden layers are a little bit more complicated, as they have more attributes to work with.</p>
+	<h5><b>Name Attribute</b></h5>
+	<p>Same as with input neurons. The name can be used to give neuron a name, but other than that it's not used in any way.</p>
+	<h5><b>Synapses Attribute</b></h5>
+	<p>The value of this attribute is another dictionary, specifying the connections of this neuron to other neurons in the network.</p>
+	<p><i>Example:</i> <b>{"synapses":{"L0N0":0.75, "L0N1":null}}</b></p>
+	<p>Neuron with this representation is connected to a neuron 0 in layer 0 with a weight of 0.75 and to the neuron 1 in layer 0 with a constant weight of 1.</p>
+	<p>In summary: the <b>L</b> and <b>N</b> in dictionary key represent the layer, and neuron in that layer. The value represents the weight of that connection (or a constant weight of 1 if null).</p>
+	<h5><b>Bias Attribute</b></h5>
+	<p>Similar to synapses attribute, with the difference in that the bias is directly connected to the neuron. The key in bias dictionary represents the bias value. Value of that key represents the weight.</p>
+	<p>Again, setting the value to null will set the bias weight to a constant of 1.</p>
+	<p><i>Example:</i> <b>{"synapses":{"L0N0":0.75, "L0N1":null}, "bias":{1:null}}</b></p>
+	<p>Neuron with this representation is connected to layers as explained earlier, while also being connected to a bias with a value of 1 and a constant weight of 1.</p>
+	<h5><b>Threshold Attribute</b></h5>
+	<p>Threshold is a value that will be added to the neuron input during the evaluation.</p>
+	<p><i>Example:</i> <b>{"synapses":{"L0N0":0.75, "L0N1":null}, "threshold":1.23}</b></p>
+	<h4>Output Layer</h4>
+	<p>Output layer behaves in the same way as the hidden layers do and even has the same attributes. What makes it output layer then, you ask? Well, there are no layers after the output layer, so it's output is not propagated further and returned as a result of NN evaluation.</p>
+	<br />
+	<p>* Since the Neural Network is ran on a free Web App on Azure, the execution and learning is rather slow. It's recommended to stick with <i><b>REALLY</b></i> low amount of epochs. ( like 1, or 2 :) )</p>
+	<p>The Neural Network library & the source code for this Web is available on <a href="https://github.com/">GitHub</a></p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+	function trainNetwork()
+	{
+		var dropbox = document.getElementById("trainingSet");
+		$.ajax({
+			type: 'get',
+			url: "/train",
+			data: { "network": document.getElementById("neuralnet-repre").value, "epochs": document.getElementById("epochs").value, "trainingSet": dropbox.options[dropbox.selectedIndex].text },
+			dataType: "JSON",
+			async: true,
+			success: function (data)
+			{
+				if (data["success"] == true)
+				{
+					document.getElementById("neuralnet-repre").value = data["network"];
+					
+					newData = [];
+					errorDataLen = data["errorVal"].length;
+					plot = document.getElementById("plot");
+					for (var output = 0; output < errorDataLen; output++)
+					{
+						graphData = { x: [], y: [], type: "scatter" };
+						
+						if (plot.data.length > 0 && plot.data.length >= output)
+						{
+							graphData.x = graphData.x.concat(plot.data[output].x);
+							graphData.y = graphData.y.concat(plot.data[output].y);
+						}
+						
+						graphData.x.push(graphData.x.length + 1);
+						graphData.y.push(data["errorVal"][output]);
+						newData.push(graphData);
+					}
+					Plotly.newPlot('plot', newData, plot.layout);
+
+					if (document.getElementById("train").innerHTML == "Stop") {trainNetwork()}
+				}
+				else
+				{
+					document.getElementById("train").innerHTML = "Start";
+				}
+				handleOutput(data);
+			},
+			error: function ()
+			{
+				document.getElementById("train").innerHTML = "Start";
+			}
+		});
+	}
+
+	function evalNetwork()
+	{
+		$.ajax({
+			type: 'get',
+			url: "/run",
+			data: { "network": document.getElementById("neuralnet-repre").value, "inputs": document.getElementById("inputs").value },
+			dataType: "JSON",
+			async: true,
+			success: function (data) {handleOutput(data)}
+		});
+	}
+
+	function handleOutput(data)
+	{
+		var output = document.getElementById("output");
+		if (data["success"] == true)
+		{
+			if (data["message"].length > 0)
+			{
+				output.innerHTML = "SUCCESS: " + data["message"];
+				output.style.color = "#00BB00"
+			}
+		}
+		else
+		{
+			output.innerHTML = "ERROR: " + data["error"];
+			output.style.color = "#BB0000";
+			document.getElementById("train").innerHTML = "Start";
+		}
+	}
+
+	$("#train").click(function () {
+		if (this.innerHTML == "Start")
+		{
+			output.innerHTML = "";
+			this.innerHTML = "Stop";
+			trainNetwork();
+		}
+		else
+		{
+			this.innerHTML = "Start";
+		}
+	});
+
+	$("#run").click(function () { evalNetwork(); });
+</script>
+
+{% endblock %}
