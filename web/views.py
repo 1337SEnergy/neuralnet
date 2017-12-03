@@ -113,23 +113,3 @@ def run():
 		return jsonify({"success":True, "message":str(net.eval(ast.literal_eval(request.args["inputs"])))});
 	except Exception as e:
 		return jsonify({"success":False, "error":str(e)});
-
-def threadRun(request):
-	try:
-		if "network" not in request.args:
-			raise Exception("undefined Neural Network");
-		if "inputs" not in request.args:
-			raise Exception("undefined inputs");
-
-		_str = request.args["network"];
-		_str = _str.replace("\\t", "");
-		_str = _str.replace("\t", "");
-		_str = _str.replace("\\n", "");
-		_str = _str.replace("\n", "");
-		_str = _str.replace("null", "None");
-		network = ast.literal_eval(_str);
-		net = NeuralNetwork(network);
-
-		return jsonify({"success":True, "message":str(net.eval(ast.literal_eval(request.args["inputs"])))});
-	except Exception as e:
-		return jsonify({"success":False, "error":str(e)});
