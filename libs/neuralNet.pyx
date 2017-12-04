@@ -6,11 +6,11 @@ cdef class NeuralNetwork:
 	cdef dict settings, functionParams;
 	cdef float learnparam;
 	
-	#NeuralNetwork(networkRepre)
-	#
-	#networkRepre: dictionary representing the neural network topology
-	#Example of network representation can be found in function baseNetwork()
 	def __init__(self, dict networkRepre):
+		"""networkRepre: dictionary representing the neural network topology
+		
+		Example of a network representation can be acquired with function neuralNet.baseNetwork()"""
+
 		if "settings" not in networkRepre:
 			raise Exception("Network representation has to contain network settings")
 		if "layers" not in networkRepre:
@@ -35,83 +35,70 @@ cdef class NeuralNetwork:
 		
 		self.learnparam = self.settings["learnparam"];
 		self.layers = [Layer(self, layer) for layer in networkRepre["layers"]];
-
-	#getRepre()
-	#
-	#Returns the representation of neural network as a dictionary
+	
 	def getRepre(self):
+		"""Returns the representation of a neural network as a dictionary"""
 		return {"settings":self.settings, "layers":[layer.getRepre() for layer in self.layers]};
 	
-	#getCompactRepre()
-	#
-	#Returns the compact representation of neural network as a dictionary
-	#Default values are omitted from the representation
 	def getCompactRepre(self):
+		"""Returns the compact representation of a neural network as a dictionary
+		
+		Default values are omitted from the representation"""
 		return {"settings":self.settings, "layers":[layer.getCompactRepre() for layer in self.layers]};
 
-	#getLayers()
-	#
-	#Returns a list containing Layer objects
-	#List represents layers in the network
 	def getLayers(self):
+		"""Returns a list containing instances of Layer objects in the network
+		
+		List represents layers in the network"""
 		return self.layers;
 	
-	#getLearnParam()
-	#
-	#returns a value of learning parameter
 	def getLearnParam(self):
+		"""returns a value of learning parameter"""
 		return self.learnparam;
 	
-	#sigmoid(x)
-	#
-	#x: value
-	#returns the value of sigmoid function for x
 	def sigmoid(self, float x):
+		"""x: value
+		
+		returns the value of a sigmoid function for x"""
 		cdef float alpha = self.functionParams["alpha"] if "alpha" in self.functionParams else 1.0;
 		return 1/(1+math.exp(-x*alpha));
 	
-	#dsigmoid(x)
-	#
-	#x: value
-	#returns the value of derivated sigmoid function for x
 	def dsigmoid(self, float x):
+		"""x: value
+		
+		returns the value of a derivated sigmoid function for x"""
 		cdef float alpha = self.functionParams["alpha"] if "alpha" in self.functionParams else 1.0;
 		cdef float m = 1+math.exp(-x*alpha);
 		return (alpha/m)-(alpha/(m**2));
 	
-	#dtanh(x)
-	#
-	#x: value
-	#returns the value of derivated tanh function for x
 	def dtanh(self, float x):
+		"""x: value
+		
+		returns the value of a derivated tanh function for x"""
 		return 1-(math.tanh(x)**2);
 	
-	#activate(x)
-	#
-	#x: value
-	#returns thhe value of activational function for x
 	def activate(self, float x):
+		"""x: value
+		
+		returns the value of a activational function for x"""
 		return self.functionParams["activate"](x);
 	
-	#derivate(x)
-	#
-	#x: value
-	#returns the value of derivated activational function for x
 	def derivate(self, float x):
+		"""x: value
+		
+		returns the value of a derivated activational function for x"""
 		return self.functionParams["derivate"](x);
 	
-	#out(x)
-	#
-	#x: value
-	#returns the value of output function. Returns x
 	def out(self, float x):
+		"""x: value
+		
+		returns the value of an output function."""
 		return x;
 
-	#eval([x1, x2])
-	#
-	#inputs: list representing inputs to the network
-	#returns the output of the neural network for a specific input
 	def eval(self, list inputs):
+		"""inputs: list representing inputs to the network
+		
+		returns the output of a neural network for specific input"""
 		cdef int i;
 		cdef object neuron;
 		
@@ -134,12 +121,11 @@ cdef class NeuralNetwork:
 
 		return prevOutputs;
 
-	#calcErrors([0], [1])
-	#
-	#result: list representing the output of the network
-	#expected: list representing expected output of the network
-	#calculates and propagates the error based on the expected value and output of the network
 	def calcErrors(self, list result, list expected):
+		"""result: list representing the actual output of the network
+		expected: list representing expected output of the network
+		
+		calculates and propagates the error based on the expected and actual output of the network"""
 		if len(result) != len(expected):
 			raise Exception("length of results is not the same as the expected results");
 
@@ -158,7 +144,7 @@ cdef class NeuralNetwork:
 		for i in range(0, size):
 			self.layers[-1].getNeurons()[i].setError((expected[i]-result[i])*self.derivate(self.layers[-1].getNeurons()[i].getInput()));
 
-		#propagate errors baclwards
+		#propagate errors backwards
 		size = len(self.layers);
 		for i in range(1, size):
 			self.layers[-i].propagateError();
@@ -167,12 +153,11 @@ cdef class NeuralNetwork:
 		for i in range(1, size):
 			self.layers[i].modifyWeights();
 
-	#train(trainingSet)
-	#
-	#trainingSet: list of rows representing training set, every row contains 2 lists: inputs and outputs of the neural network
-	#calculates the errors and adjusts weights based on the training set
-	#Example: train([[[1, 1], [1]], [[1, 0], [1]], [[0, 1], [1]], [[0, 0], [0]]])
 	def train(self, list trainingSet):
+		"""trainingSet: list of rows representing training set, every row contains 2 lists: inputs and outputs of the neural network
+		
+		calculates the errors and adjusts weights based on the training set
+		Example: NeuralNetwork.train([[[1, 1], [1]], [[1, 0], [1]], [[0, 1], [1]], [[0, 0], [0]]])"""
 		cdef object row;
 		cdef object result;
 		
@@ -184,44 +169,36 @@ cdef class Layer:
 	cdef object network;
 	cdef object neurons;
 	
-	#Layer(network, layerRepre)
-	#
-	#net: instance of the NeuralNetwork
-	#layerRepre: list containing dictionaries, where a dictionary is a neuron with specific attributes
-	#creates a Layer object in the network with representation specified in layerRepre
 	def __init__(self, object net, list layerRepre):
+		"""net: instance of a NeuralNetwork object
+		
+		layerRepre: list containing dictionaries, where every dictionary is a neuron with specific attributes
+		creates a Layer object in the network with representation specified by layerRepre"""
 		self.network = net;
 		self.neurons = [Neuron(self, repre) if "synapses" in repre and len(repre["synapses"]) > 0 else Variable(repre) if "input" not in repre or repre["input"] == None else Constant(repre) for repre in layerRepre];
 	
-	#getRepre()
-	#
-	#analogous function to NeuralNetwork.getRepre()
 	def getRepre(self):
+		"""returns a list containing representations of neurons in the layer"""
 		return [neuron.getRepre() for neuron in self.neurons];
 	
-	#getCompactRepre()
-	#
-	#analogous function to NeuralNetwork.getCompactRepre()
 	def getCompactRepre(self):
+		"""returns a list containing compact representations of neurons in the layer
+		
+		default values are omitted"""
 		return [neuron.getCompactRepre() for neuron in self.neurons];
 
-	#getNetwork()
-	#
-	#returns the instance of the network the layer is in
 	def getNetwork(self):
+		"""returns the instance of the network the layer is in"""
 		return self.network;
 
-	#getNeurons()
-	#
-	#returns a list of Neuron objects in the layer
 	def getNeurons(self):
+		"""returns a list of Neuron objects in the layer"""
 		return self.neurons;
 
-	#eval([out1, out2])
-	#
-	#outputs: list of outputs on the previous layer
-	#calculates the outputs of neurons in the layer based on the outputs in the previous layer
 	def eval(self, list outputs):
+		"""outputs: list of outputs on the previous layer
+	
+		calculates the outputs of neurons in the layer based on the outputs in the previous layer"""
 		cdef float _in, _act, _out, bias;
 		cdef str synapse;
 		cdef object neuron, weight;
@@ -249,10 +226,8 @@ cdef class Layer:
 
 		return [neuron.getValue() for neuron in self.neurons];
 
-	#propagateError()
-	#
-	#backpropagates the error on the neurons in the layer
 	def propagateError(self):
+		"""backpropagates the error on the neurons in the layer to the previous layer based on connection"""
 		cdef object weight;
 		cdef str synapse;
 		cdef object neuron, targetNeuron;
@@ -269,10 +244,8 @@ cdef class Layer:
 					
 					targetNeuron.setError(targetNeuron.getError() + (neuron.getError()*weight)*self.getNetwork().derivate(targetNeuron.getInput()));
 
-	#modifyWeights()
-	#
-	#modifies weights on the neurons in the layer based on the errors on neurons
 	def modifyWeights(self):
+		"""modifies weights on the neurons in the layer based on error on neurons"""
 		cdef float bias, learnparam = self.getNetwork().getLearnParam();
 		cdef str synapse;
 		cdef object neuron, outputNeuron, weight;
@@ -306,25 +279,22 @@ cdef class Layer:
 cdef class Constant:
 	cdef dict repre;
 	
-	#Constant(constRepre)
-	#
-	#constRepre: dictionary representing the attributes of Constant
-	#creates a constant input with attributes specified in constRepre dictionary
 	def __init__(self, dict constRepre):
+		"""constRepre: dictionary representing the attributes of a Constant object
+		
+		creates a constant input with attributes specified in constRepre dictionary"""
 		self.repre = {};
 		self.repre["name"] = constRepre["name"] if "name" in constRepre else "";
 		self.repre["input"] = constRepre["input"] if "input" in constRepre else None;
 
-	#getRepre()
-	#
-	#analogous to NeuralNetwork.getRepre()
 	def getRepre(self):
+		"""returns dictionary containing the attributes of an instance"""
 		return self.repre;
 	
-	#getCompactRepre()
-	#
-	#analogous to NeuralNetwork.getCompactRepre()
 	def getCompactRepre(self):
+		"""returns dictionary containing the attributes of an instance
+		
+		default values are omitted"""
 		cdef dict compact;
 		
 		compact = {"input":self.repre["input"]};
@@ -333,40 +303,31 @@ cdef class Constant:
 		
 		return compact;
 
-	#setName(name)
-	#
-	#name: string representing the name of a neuron
-	#sets the name of a neuron to a string
 	def setName(self, str name):
+		"""name: string representing the name of an instance
+		
+		sets the name of an instance to name"""
 		self.repre["name"] = name;
 
-	#getName()
-	#
-	#returns the name of a neuron
 	def getName(self):
+		"""returns the name representation"""
 		return self.repre["name"];
 
-	#getValue()
-	#
-	#returns the constant value of the Constant object
 	def getValue(self):
+		"""returns the constant value of the Constant object"""
 		return self.repre["input"];
 
-#Constant subclass
 cdef class Variable(Constant):
 
-	#getRepre()
-	#
-	#analogous to Constant.getRepre()
-	#returns input attribute as a NoneType object
 	def getRepre(self):
+		"""returns dictionary containing the attributes of an instance"""
 		self.repre["input"] = None;
 		return self.repre;
 	
-	#getCompactRepre()
-	#
-	#analogous to Constant.getCompactRepre()
 	def getCompactRepre(self):
+		"""returns dictionary containing the attributes of an instance
+		
+		default values are omitted"""
 		cdef dict compact;
 		
 		compact = {"input":None};
@@ -375,11 +336,10 @@ cdef class Variable(Constant):
 		
 		return compact;
 	
-	#setValue(value)
-	#
-	#value: value to be set on the input
-	#sets the value on the input of variable
 	def setValue(self, float value):
+		"""value: value to be set on the input
+		
+		sets the value of the input of an instance"""
 		value = (round(value*100000))/100000;
 		self.repre["input"] = value;
 
@@ -387,12 +347,11 @@ cdef class Neuron:
 	cdef object layer;
 	cdef dict repre;
 	
-	#Neuron(layer, neuronRepre)
-	#
-	#layer: instance of a Layer the neuron is part of
-	#neuronRepre: dictionary containing the attributes of a neuron
-	#creates a Neuron object that is a part of layer
 	def __init__(self, object layer, dict neuronRepre):
+		"""layer: instance of a Layer object the neuron is a part of
+		neuronRepre: dictionary containing the attributes of a neuron
+		
+		creates a Neuron object that is a part of layer"""
 		self.layer = layer;
 		
 		self.repre = {};
@@ -404,16 +363,14 @@ cdef class Neuron:
 		self.repre["output"] = None;
 		self.repre["error"] = 0.0;
 
-	#getRepre()
-	#
-	#analogous to Variable.getRepre()
 	def getRepre(self):
+		"""returns dictionary containing the attributes of an instance"""
 		return self.repre;
 	
-	#getCompactRepre()
-	#
-	#analogous to Variable.getCompactRepre()
 	def getCompactRepre(self):
+		"""returns dictionary containing the attributes of an instance
+		
+		default values are omitted"""
 		cdef dict compact, defaults;
 		cdef object key, value;
 		
@@ -426,29 +383,24 @@ cdef class Neuron:
 		
 		return compact;
 
-	#getLayer()
-	#
-	#returns the instance of the object Layer the neuron is a part of
 	def getLayer(self):
+		"""returns the instance of the object Layer the neuron is a part of"""
 		return self.layer;
 
-	#setName(name)
-	#
-	#analogous to Variable.setName()
 	def setName(self, str name):
+		"""sets the 'name' attribute in a neuron representation to name"""
 		self.repre["name"] = name;
 
-	#getName()
-	#
-	#analogous to Variable.getName()
 	def getName(self):
+		"""returns the name representation of an instance as a string"""
 		return self.repre["name"];
 
-	#setSynapses(synapses)
-	#
-	#synapses: dictionary representing synapses on the neuron
-	#connects neuron to a neuron in a specific layer with a weight
 	def setSynapses(self, dict synapses):
+		"""synapses: dictionary representing synapses on the neuron
+		
+		connects neuron to a neuron in a specific layer with a weight
+		{"L0N0":0.75, "L0N1":null}
+		null = 1 const"""
 		cdef str synapse;
 		cdef object weight;
 		
@@ -459,28 +411,23 @@ cdef class Neuron:
 		
 		self.repre["synapses"] = synapses;
 
-	#getSynapses()
-	#
-	#returns dictionary representing neuron connections
 	def getSynapses(self):
+		"""returns dictionary representing the neuron connections"""
 		return self.repre["synapses"];
 
-	#setThreshold(threshold)
-	#
-	#threshold: threshold to be added on the neuron's input
 	def setThreshold(self, float threshold):
+		"""threshold: threshold to be added on the neuron's input during evaluation"""
 		self.repre["threshold"] = threshold;
 
-	#getThreshold()
-	#
-	#returns the threshold on the neuron
 	def getThreshold(self):
+		"""returns the threshold on the neuron"""
 		return self.repre["threshold"];
 
-	#setBias(bias)
-	#
-	#bias: dictionary representing the value of a bias and a weight
 	def setBias(self, dict bias):
+		"""bias: dictionary representing the value of a bias and a weight
+		
+		{1:0.4, 1:null}
+		null = 1 const"""
 		cdef float b;
 		cdef object weight;
 		
@@ -491,53 +438,38 @@ cdef class Neuron:
 		
 		self.repre["bias"] = bias;
 
-	#getBias()
-	#
-	#returns dictionary representing biases connected to the neuron
 	def getBias(self):
+		"""returns dictionary representing biases connected to the neuron"""
 		return self.repre["bias"];
 
-	#setInput(value)
-	#
-	#value: the value to be set on neuron input
 	def setInput(self, float value):
+		"""value: the value to be set on neuron input"""
 		self.repre["input"] = (round(value*100000))/100000;
 
-	#getInput()
-	#
-	#returns the input on the neuron
 	def getInput(self):
+		"""returns the input on the neuron"""
 		return self.repre["input"];
 
-	#setValue(value)
-	#
-	#value: the value to be set on neuron output
 	def setValue(self, float value):
+		"""value: the value to be set on neuron output"""
 		self.repre["output"] = (round(value*100000))/100000;
 
-	#getValue()
-	#
-	#returns the value on the neuron output
 	def getValue(self):
+		"""returns the value on the neuron output"""
 		return self.repre["output"];
 
-	#setError(error)
-	#
-	#error: the value to be set as a neuron's error
 	def setError(self, error):
+		"""error: the value to be set as a neuron's error"""
 		self.repre["error"] = (round(error*100000))/100000;
 
-	#getError()
-	#
-	#returns the error on the neuron
 	def getError(self):
+		"""returns the error on the neuron"""
 		return self.repre["error"];
 		
-#baseNetwork()
-#
-#returns the dict representing the base neural network
-#1 input, 2 hidden layers (3 & 2 neurons respectivelly), 1 output
 def baseNetwork():
+	"""returns the dict representing the base neural network
+	
+	1 input, 2 hidden layers (3 & 2 neurons respectivelly), 1 output"""
 	return {
 			"settings":{
 				"function":{"name":"sigmoid", "alpha":0.5},
@@ -563,13 +495,12 @@ def baseNetwork():
 			]
 		};
 
-#trainNetwork(network, setPath, epochs = 5)
-#
-#network: NeuralNetwork object
-#setPath: path to the training set
-#epochs: amount of epochs to do (optional, default = 5)
-#returns a dictionary representing the neural network with modified weights
 def trainNetwork(object network, str setPath, int epochs = 5):
+	"""network: NeuralNetwork object
+	setPath: path to the training set
+	epochs: amount of epochs to do (optional, default = 5)
+	
+	returns a dictionary representing the neural network with modified weights"""
 	cdef object net;
 	cdef int i;
 	
