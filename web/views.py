@@ -2,7 +2,7 @@ from datetime import datetime
 from os import listdir
 from os.path import isfile, join
 from flask import render_template, request, jsonify, json, redirect, url_for;
-from web import app
+from web import app, dataSets, loadDataSet;
 from neuralNet import trainNetwork, NeuralNetwork, baseNetwork;
 from werkzeug.utils import secure_filename
 import ast;
@@ -70,9 +70,12 @@ def train():
 	try:
 		if "trainingSet" not in request.args:
 			raise Exception("No training set specified");
-	
-		if request.args["trainingSet"] not in listdir("./dataSets"):
-			raise Exception("Yo how you got that data set?");
+			
+		if request.args["trainingSet"] not in dataSets:
+			if request.args["trainingSet"] not in listdir("./dataSets"):
+				raise Exception("Yo how you got that data set?");
+			
+			dataSets[request.args["trainingSet"]] = loadDataSet(request.args["trainingSet"]);
 
 		network = baseNetwork();
 		if "network" in request.args:
@@ -83,11 +86,15 @@ def train():
 			_str = _str.replace("\n", "");
 			_str = _str.replace("null", "None");
 			network = ast.literal_eval(_str);
-
+		
+		ratio = int(request.args["train-ratio"]) if "train-ratio" in request.args else 75;
+		if ratio > 100 or ratio < 0:
+			ratio = 75;
+		
 		epochs = int(request.args["epochs"]) if "epochs" in request.args else 5;
 		epochs = min(epochs, 50);
 
-		result = trainNetwork(network, "./dataSets/{}".format(request.args["trainingSet"]), epochs);
+		result = trainNetwork(network, dataSets[request.args["trainingSet"]], ratio, epochs);
 		return jsonify({"success":True, "network":compactJson(result["network"]), "message":"Average time per epoch: {} sec".format(result["average"]), "errorVal":result["error"]});
 
 	except Exception as e:
