@@ -182,9 +182,15 @@ cdef class NeuralNetwork:
 		cdef object result;
 		
 		#calculate errors & modify weights for every row in the training set
+		cdef list errors = [], err;
 		for row in trainingSet:
 			result = self.eval(row[0]);
 			self.calcErrors(result, row[1]);
+			
+			err = [row[1][j]-result[j] for j in range(0, len(result))];
+			errors.append(sum(err)/len(err));
+		
+		return errors;
 		
 cdef class Layer:
 	cdef object network;
@@ -566,9 +572,6 @@ def trainNetwork(object network, list trainingSet, int ratio = 75, int epochs = 
 	
 	returns a dictionary representing the neural network with modified weights"""
 	
-	cdef object net;
-	cdef int i;
-	
 	if type(network) == str or type(network) == unicode:
 		network = json.loads(network);
 	elif type(network) != dict:
@@ -583,24 +586,17 @@ def trainNetwork(object network, list trainingSet, int ratio = 75, int epochs = 
 	if len(trainingSet) < 1:
 		raise Exception("Training set is empty!");
 	
-	net = NeuralNetwork(network);
-	
-	cdef object counter, reader;
-	cdef list inputs, outputs, row, _row, headerRow, _trainingSet;
-	cdef float val;
+	cdef object net = NeuralNetwork(network);
 	
 	#compare inputs & outputs of the training set to those of a network
-	netIO = [len(network["layers"][0]), len(network["layers"][-1])];
-	columns = len(trainingSet[0]);
+	cdef list netIO = [len(network["layers"][0]), len(network["layers"][-1])];
+	cdef int columns = len(trainingSet[0]);
 	if columns != netIO[0] + netIO[1]:
 		raise Exception("Amount of inputs & outputs in the network doesn't match the dataset. Network IO: {}/{}, Set columns: {}".format(netIO[0], netIO[1], columns));
 	
-	size = round(len(trainingSet)*(ratio/100.0));
-	_testSet = trainingSet[size:];
-	trainingSet = trainingSet[0:size];
-	
 	#row to [input, output] set
-	_trainingSet = [];
+	cdef list _trainingSet = [];
+	cdef list inputs, outputs, row, _row;
 	for row in trainingSet:
 		inputs = row[0:netIO[0]];
 		outputs = row[netIO[0]:];
@@ -608,11 +604,27 @@ def trainNetwork(object network, list trainingSet, int ratio = 75, int epochs = 
 			
 		_trainingSet.append(_row);
 	
+	cdef int size = round(len(_trainingSet)*(ratio/100.0));
+	cdef list _testSet = _trainingSet[size:];
+	_trainingSet = _trainingSet[0:size];
+	
 	#train for every epoch
+	cdef dict epochErrors = {"train":[], "test":[]}
+	cdef list trainErros, testErrors, err, out;
+	cdef int i;
 	start = time.time();
 	for i in range(0, epochs):
-		net.train(_trainingSet);
+		trainErrors = net.train(_trainingSet);
+		if len(trainErrors) > 0: epochErrors["train"].append(sum(trainErrors)/len(trainErrors));
+		else: epochErrors["train"].append(0);
+		
+		testErrors = [];
+		for row in _testSet:
+			out = net.eval(row[0]);
+			err = [row[1][j]-out[j] for j in range(0, len(out))];
+			testErrors.append(sum(err)/len(err));
+		
+		if len(testErrors) > 0: epochErrors["test"].append(sum(testErrors)/len(testErrors));
+		else: epochErrors["test"].append(0);
 	
-	#TODO: test on test set
-	
-	return {"network":net.getCompactRepre(), "average":(time.time()-start)/epochs, "error":[neuron.getError() for neuron in net.getLayers()[-1].getNeurons()]};
+	return {"network":net.getCompactRepre(), "average":(time.time()-start)/epochs, "epochErrors":epochErrors};

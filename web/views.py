@@ -67,6 +67,7 @@ def upload_file():
 
 @app.route("/train")
 def train():
+	'''
 	try:
 		if "trainingSet" not in request.args:
 			raise Exception("No training set specified");
@@ -99,6 +100,38 @@ def train():
 
 	except Exception as e:
 		return jsonify({"success":False, "error":str(e)});
+	'''
+	
+	if "trainingSet" not in request.args:
+		raise Exception("No training set specified");
+			
+	if request.args["trainingSet"] not in dataSets:
+		if request.args["trainingSet"] not in listdir("./dataSets"):
+			raise Exception("Yo how you got that data set?");
+			
+		dataSets[request.args["trainingSet"]] = loadDataSet(request.args["trainingSet"]);
+
+	network = baseNetwork();
+	if "network" in request.args:
+		_str = request.args["network"];
+		_str = _str.replace("\\t", "");
+		_str = _str.replace("\t", "");
+		_str = _str.replace("\\n", "");
+		_str = _str.replace("\n", "");
+		_str = _str.replace("null", "None");
+		network = ast.literal_eval(_str);
+		
+	ratio = int(request.args["train-ratio"]) if "train-ratio" in request.args else 75;
+	if ratio > 100 or ratio < 0:
+		ratio = 75;
+		
+	epochs = int(request.args["epochs"]) if "epochs" in request.args else 5;
+	epochs = max(epochs, 0);
+	epochs = min(epochs, 5);
+
+	result = trainNetwork(network, dataSets[request.args["trainingSet"]], ratio, epochs);
+	return jsonify({"success":True, "network":compactJson(result["network"]), "message":"Average time per epoch: {} sec".format(result["average"]), "epochErrors":result["epochErrors"]});
+
 
 @app.route("/run")
 def run():

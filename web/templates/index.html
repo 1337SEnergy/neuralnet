@@ -14,7 +14,8 @@
 			var layout = {
 				autosize: false,
 				width: 650,
-				height: 480
+				height: 480,
+				showlegend: true
 			};
 			Plotly.newPlot('plot', data=[], layout);</script>
 </div>
@@ -114,25 +115,25 @@
 				if (data["success"] == true)
 				{
 					document.getElementById("neuralnet-repre").value = data["network"];
-					
-					newData = [];
-					errorDataLen = data["errorVal"].length;
 					plot = document.getElementById("plot");
-					for (var output = 0; output < errorDataLen; output++)
+					
+					if(plot.data.length > 0)
+					{ plotData = plot.data; }
+					else
+					{ plotData = [{x:[], y:[], name:"Train loss", type:"scatter"}, {x:[], y:[], name:"Test loss", type:"scatter"}]; }
+					
+					for(var i = 0; i < data["epochErrors"]["train"].length; i++)
 					{
-						graphData = { x: [], y: [], type: "scatter" };
-						
-						if (plot.data.length > 0 && plot.data.length >= output)
-						{
-							graphData.x = graphData.x.concat(plot.data[output].x);
-							graphData.y = graphData.y.concat(plot.data[output].y);
-						}
-						
-						graphData.x.push(graphData.x.length + 1);
-						graphData.y.push(data["errorVal"][output]);
-						newData.push(graphData);
+						plotData[0].x.push(plotData[0].x.length + 1);
+						plotData[0].y.push(data["epochErrors"]["train"][i]);
 					}
-					Plotly.newPlot('plot', newData, plot.layout);
+					
+					for(var i = 0; i < data["epochErrors"]["test"].length; i++)
+					{
+						plotData[1].x.push(plotData[1].x.length + 1);
+						plotData[1].y.push(data["epochErrors"]["test"][i]);
+					}
+					Plotly.newPlot('plot', plotData, plot.layout);
 
 					if (document.getElementById("train").innerHTML == "Stop") {trainNetwork()}
 				}
